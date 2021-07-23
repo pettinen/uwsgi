@@ -44,6 +44,10 @@
 #define PYTHREE
 #endif
 
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7) || PY_MAJOR_VERSION < 3
+#define UWSGI_SHOULD_CALL_PYEVAL_INITTHREADS
+#endif
+
 #if (PY_VERSION_HEX < 0x03090000)
 #ifndef Py_SET_SIZE
 #define Py_SET_SIZE(o, size) ((o)->ob_size = (size))
@@ -212,6 +216,8 @@ struct uwsgi_python {
 	int wsgi_disable_file_wrapper;
 
 	char *worker_override;
+
+	char *executable;
 };
 
 

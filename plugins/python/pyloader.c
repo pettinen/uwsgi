@@ -22,7 +22,7 @@ PyMethodDef uwsgi_eventfd_write_method[] = { {"uwsgi_eventfd_write", py_eventfd_
 void set_dyn_pyhome(char *home, uint16_t pyhome_len) {
 
 
-	char venv_version[15];
+	char venv_version[30];
 	PyObject *site_module;
 
 	PyObject *pysys_dict = get_uwsgi_pydict("sys");
@@ -45,8 +45,8 @@ void set_dyn_pyhome(char *home, uint16_t pyhome_len) {
                 PyDict_SetItemString(pysys_dict, "prefix", venv_path);
                 PyDict_SetItemString(pysys_dict, "exec_prefix", venv_path);
 
-                venv_version[14] = 0;
-                if (snprintf(venv_version, 15, "/lib/python%d.%d", PY_MAJOR_VERSION, PY_MINOR_VERSION) == -1) {
+                bzero(venv_version, 30);
+                if (snprintf(venv_version, 30, "/lib/python%d.%d", PY_MAJOR_VERSION, PY_MINOR_VERSION) == -1) {
                         return;
                 }
 
@@ -660,7 +660,7 @@ PyObject *uwsgi_pecan_loader(void *arg1) {
 		exit(UWSGI_FAILED_APP_CODE);
 	}
 
-	pecan_app = PyEval_CallObject(pecan_deploy, pecan_arg);
+	pecan_app = PyObject_CallObject(pecan_deploy, pecan_arg);
 	if (!pecan_app) {
 		PyErr_Print();
 		exit(UWSGI_FAILED_APP_CODE);
@@ -724,7 +724,7 @@ PyObject *uwsgi_paste_loader(void *arg1) {
 		exit(UWSGI_FAILED_APP_CODE);
 	}
 
-	paste_app = PyEval_CallObject(paste_loadapp, paste_arg);
+	paste_app = PyObject_CallObject(paste_loadapp, paste_arg);
 	if (!paste_app) {
 		PyErr_Print();
 		exit(UWSGI_FAILED_APP_CODE);
@@ -739,24 +739,14 @@ PyObject *uwsgi_eval_loader(void *arg1) {
 
 	PyObject *wsgi_eval_module, *wsgi_eval_callable = NULL;
 
-	struct _node *wsgi_eval_node = NULL;
 	PyObject *wsgi_compiled_node;
 
-	wsgi_eval_node = PyParser_SimpleParseString(code, Py_file_input);
-	if (!wsgi_eval_node) {
-		PyErr_Print();
-		uwsgi_log( "failed to parse <eval> code\n");
-		exit(UWSGI_FAILED_APP_CODE);
-	}
-
-	wsgi_compiled_node = (PyObject *) PyNode_Compile(wsgi_eval_node, "uwsgi_eval_config");
-
+	wsgi_compiled_node = Py_CompileString(code, "uwsgi_eval_config", Py_file_input);
 	if (!wsgi_compiled_node) {
 		PyErr_Print();
 		uwsgi_log( "failed to compile eval code\n");
 		exit(UWSGI_FAILED_APP_CODE);
 	}
-
 
 	wsgi_eval_module = PyImport_ExecCodeModule("uwsgi_eval_config", wsgi_compiled_node);
 	if (!wsgi_eval_module) {
